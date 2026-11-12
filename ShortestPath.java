@@ -300,7 +300,7 @@ class StateNode implements Comparable<StateNode>
     }
 }
 
-class GraphDemo extends JPanel implements ChangeListener, ActionListener, PopupMenuListener, Runnable
+class GraphView extends JPanel implements ChangeListener, ActionListener, PopupMenuListener
 {
     Graph graph = new Graph(4, 4);
     ArrayList<GraphRecord> history;
@@ -311,7 +311,7 @@ class GraphDemo extends JPanel implements ChangeListener, ActionListener, PopupM
     JTextField currTime, maxTime;
     JSlider time;
     JComboBox<String> algo;
-    GraphDemo()
+    GraphView()
     {
         setLayout(new BorderLayout());
 
@@ -582,10 +582,14 @@ class GraphDemo extends JPanel implements ChangeListener, ActionListener, PopupM
 
         return history;
     }
+}
+
+public class ShortestPath implements Runnable
+{
 
     public static void main(String[] args)
     {
-        SwingUtilities.invokeLater(new GraphDemo());
+        SwingUtilities.invokeLater(new ShortestPath());
     }
 
     @Override
@@ -593,12 +597,13 @@ class GraphDemo extends JPanel implements ChangeListener, ActionListener, PopupM
     {
         JFrame frame;
         frame = new JFrame();
+        frame.setTitle("Shortest Path");
         frame.setLayout(new BorderLayout());
         frame.setSize(800, 800);
         frame.setResizable(true);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLocationRelativeTo(null);
-        frame.add(new GraphDemo());
+        frame.add(new GraphView());
         frame.setVisible(true);
     }
 }
