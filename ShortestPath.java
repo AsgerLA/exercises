@@ -5,10 +5,13 @@ import java.awt.Dimension;
 import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
@@ -60,13 +63,15 @@ class Graph extends JComponent
     GraphEdge[][] mat;
     int rows, cols;
 
+    static final float step = 10.0f;
+    static final int radius = 10;
+
     Graph(int cols, int rows)
     {
         this.rows = rows;
         this.cols = cols;
 
         Random rand = new Random(0xcafebebe);
-        float step = 10.0f;
         nodes = new GraphNode[rows*cols];
         ArrayList<GraphEdge> dyn = new ArrayList<>();
         for (int y = 0; y < rows; ++y) {
@@ -126,7 +131,6 @@ class Graph extends JComponent
         return toview(y, minY, maxY, h);
     }
 
-    int radius = 10;
     @Override
     public void paintComponent(Graphics g)
     {
@@ -196,6 +200,21 @@ class Graph extends JComponent
                     x + (int)(rect.getHeight()-rect.getWidth()),
                     y + fm.getDescent());
         }
+    }
+
+    int nodeAt(Point p)
+    {
+        for (int i = 0; i < nodes.length; ++i) {
+            Point2D.Float check = nodes[i].point;
+            int x = toScreenX(check.x, getWidth());
+            int y = toScreenY(check.y, getHeight());
+            if (p.x >= x-radius && p.x < x+radius*2 &&
+                p.y >= y-radius && p.y < y+radius*2) {
+                return i;
+            }
+        }
+
+        return -1;
     }
 }
 
@@ -300,7 +319,7 @@ class StateNode implements Comparable<StateNode>
     }
 }
 
-class GraphView extends JPanel implements ChangeListener, ActionListener, PopupMenuListener
+class GraphView extends JPanel implements ChangeListener, ActionListener, PopupMenuListener, MouseListener
 {
     Graph graph = new Graph(4, 4);
     ArrayList<GraphRecord> history;
@@ -311,10 +330,13 @@ class GraphView extends JPanel implements ChangeListener, ActionListener, PopupM
     JTextField currTime, maxTime;
     JSlider time;
     JComboBox<String> algo;
+    int start, end;
     GraphView()
     {
         setLayout(new BorderLayout());
+        graph.addMouseListener(this);
 
+        end = graph.nodes.length-1;
         algo = new JComboBox<>(new String[]{"Dijkstra", "A*"});
         algo.setSelectedIndex(0);
         algo.addActionListener(this);
@@ -369,9 +391,9 @@ class GraphView extends JPanel implements ChangeListener, ActionListener, PopupM
         table.removeColumn(tableCostCol);
         qtable.removeColumn(qtableCostCol);
         if (index == 0) {
-            history = dijkstra(graph, 0, graph.nodes.length-1);
+            history = dijkstra(graph, start, end);
         } else if (index == 1) {
-            history = astar(graph, 0, graph.nodes.length-1);
+            history = astar(graph, start, end);
             table.addColumn(tableCostCol);
             qtable.addColumn(qtableCostCol);
         } else {
@@ -409,6 +431,24 @@ class GraphView extends JPanel implements ChangeListener, ActionListener, PopupM
         setFrame(history.get(val));
     }
 
+    public void mouseClicked(MouseEvent e) {}
+    public void mousePressed(MouseEvent e) {}
+    public void mouseReleased(MouseEvent e)
+    {
+        int i = graph.nodeAt(e.getPoint());
+        if (i == -1)
+            return;
+        if (e.getButton() == 1) {
+            start = i;
+            setAlgo(algo.getSelectedIndex());
+        } else if (e.getButton() == 3) {
+            end = i;
+            setAlgo(algo.getSelectedIndex());
+        }
+    }
+    public void mouseEntered(MouseEvent e) {}
+    public void mouseExited(MouseEvent e) {}
+
     private void setFrame(GraphRecord record)
     {
         GraphEdge e;
@@ -434,11 +474,11 @@ class GraphView extends JPanel implements ChangeListener, ActionListener, PopupM
                 graph.nodes[node.id].color = Color.GREEN;
             }
         }
-        graph.nodes[0].color = Color.LIGHT_GRAY;
-        graph.nodes[table.getRowCount()-1].color = Color.MAGENTA;
+        graph.nodes[start].color = Color.LIGHT_GRAY;
+        graph.nodes[end].color = Color.MAGENTA;
 
         int it = record.currId();
-        while (it != 0) {
+        while (it != start) {
             e = graph.mat[it][record.nodes()[it].prev];
             if (e != null) {
                 e.color = Color.ORANGE;
